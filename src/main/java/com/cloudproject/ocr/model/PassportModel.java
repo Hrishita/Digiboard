@@ -1,4 +1,4 @@
-package ocr.model;
+package com.cloudproject.ocr.model;
 
 /**
  * Passport pojo class to store the ket-value pairs in passport
