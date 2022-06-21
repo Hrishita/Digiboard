@@ -4,7 +4,10 @@ import com.cloudproject.ocr.model.OCRResponseModel;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 class DocumentReaderController {
@@ -12,11 +15,11 @@ class DocumentReaderController {
     @Autowired
     private DocumentReaderService documentReaderService;
 
-    @GetMapping("/image/details")
-    public OCRResponseModel getImageDetails() {
+    @PostMapping("/image/details")
+    public OCRResponseModel getImageDetails(@RequestParam("file") MultipartFile file) {
 
 
-        return documentReaderService.getDetailsFromImage();
+        return documentReaderService.getDetailsFromImage(file);
 
 
     }
