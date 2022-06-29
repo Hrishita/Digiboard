@@ -3,6 +3,8 @@ package com.cloudproject.ocr;
 import com.amazonaws.services.textract.AmazonTextract;
 import com.amazonaws.services.textract.AmazonTextractClientBuilder;
 import com.amazonaws.services.textract.model.*;
+import com.cloudproject.ocr.checks.DataIntegrityChecks;
+import com.cloudproject.ocr.checks.IntegrityChecks;
 import com.cloudproject.ocr.model.Data;
 import com.cloudproject.ocr.model.OCRResponseModel;
 import org.apache.commons.io.IOUtils;
@@ -84,6 +86,14 @@ public class DocumentReaderService {
                 data.setDataField(keyS, kvMap.get(keyS).toString());
             }
             ocrResponseModel.setData(data);
+
+            DataIntegrityChecks dataIntegrityChecks = new DataIntegrityChecks();
+            dataIntegrityChecks.setValid_dob(IntegrityChecks.check_dob(data.getDate_of_birth()));
+            dataIntegrityChecks.setValid_expiry_date(IntegrityChecks.check_expiry_date(data.getDate_of_expiry()));
+            dataIntegrityChecks.setValid_passport_number(IntegrityChecks.check_passport_number(data.getPassport_number()));
+            dataIntegrityChecks.setValid_issue_date(IntegrityChecks.check_issue_date(data.getDate_of_issue()));
+
+            ocrResponseModel.setIntegrity_checks(dataIntegrityChecks);
 
         }
     }
@@ -180,4 +190,5 @@ public class DocumentReaderService {
         multipart.transferTo(convFile);
         return convFile;
     }
+
 }
