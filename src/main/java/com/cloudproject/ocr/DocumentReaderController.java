@@ -3,6 +3,7 @@ package com.cloudproject.ocr;
 import com.cloudproject.ocr.model.OCRResponseModel;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,12 +16,15 @@ class DocumentReaderController {
     private DocumentReaderService documentReaderService;
 
     @PostMapping("/image/details")
-    public OCRResponseModel getImageDetails(@RequestParam("file") MultipartFile file) {
+    public OCRResponseModel getImageDetails(@RequestParam("file") MultipartFile file, @RequestParam("username") String username) {
 
 
-        return documentReaderService.getDetailsFromImage(file);
+        return documentReaderService.getDetailsFromImage(file,username);
 
 
     }
+
+    @GetMapping("/test")
+    public String getImageDetails() {return "success";}
 
 }

@@ -3,10 +3,12 @@ package com.cloudproject.ocr;
 import com.amazonaws.services.textract.AmazonTextract;
 import com.amazonaws.services.textract.AmazonTextractClientBuilder;
 import com.amazonaws.services.textract.model.*;
+import com.cloudproject.awshandler.DynamoDbHandler;
 import com.cloudproject.ocr.checks.DataIntegrityChecks;
 import com.cloudproject.ocr.checks.IntegrityChecks;
 import com.cloudproject.ocr.model.Data;
 import com.cloudproject.ocr.model.OCRResponseModel;
+import com.cloudproject.awshandler.SSShandler;
 import org.apache.commons.io.IOUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -35,7 +37,7 @@ public class DocumentReaderService {
         kvMap = new HashMap<String, String>();
     }
 
-    public OCRResponseModel getDetailsFromImage(MultipartFile mpFile)
+    public OCRResponseModel getDetailsFromImage(MultipartFile mpFile, String username)
     {
         valueMap.clear();
         wordMap.clear();
@@ -95,6 +97,9 @@ public class DocumentReaderService {
 
             ocrResponseModel.setIntegrity_checks(dataIntegrityChecks);
 
+            //upload to S3
+            String publicURL = SSShandler.storeData(file,username);
+            DynamoDbHandler.insertObject(username,ocrResponseModel);
         }
     }
         catch (Exception e) {
