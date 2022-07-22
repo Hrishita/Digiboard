@@ -1,0 +1,52 @@
+.Grid {
+  width: 40%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 20px;
+}
+
+.InputLabel {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 50px;
+}
+
+.heading {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 30px;
+}
+
+.Instruction {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 20px;
+}
+
+.Box {
+  padding: 13px 60px 13px 60px;
+}
+
+.image {
+  padding: 30px 60px 0px 60px;
+  width: 35%;
+  left: 50%;
+  transform: translate(40%, 0%);
+}
+
+.textfield {
+  width: 100%;
+}
+
+.Button {
+  width: 100%;
+}
+
+.ChooseFile {
+  margin-top: 20px;
+  left: 50%;
+  transform: translate(30%, 0%);
+  padding: 0px 0px 30px 60px;
+}
