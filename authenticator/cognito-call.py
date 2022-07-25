@@ -39,7 +39,7 @@ table = db_client.Table(TABLE_NAME)
 async def sign_up():
     return "Cognito container is working"
 
-@app.post("/cognito/sign-up")
+@app.post("/authenticator/sign-up")
 async def sign_up_cognito(request: Request):
     try:
         response_dict = dict(await request.json())
@@ -68,7 +68,7 @@ async def sign_up_cognito(request: Request):
         print(e)
         return e
     
-@app.post("/cognito/confirm-code")
+@app.post("/authenticator/confirm-code")
 async def confirm_signup(request:Request):
     try:
         response_dict = dict(await request.json())
@@ -89,7 +89,7 @@ async def confirm_signup(request:Request):
         print(e)
         return e
 
-@app.post("/cognito/forgot-password")
+@app.post("/authenticator/forgot-password")
 async def forgot_password(request:Request):
     try:
 
@@ -108,7 +108,7 @@ async def forgot_password(request:Request):
         print(e)
         return e
 
-@app.post("/cognito/confirm-forgot-password")
+@app.post("/authenticator/confirm-forgot-password")
 async def confirm_forgot_password(request:Request):
     try:
         response_dict = dict(await request.json())
@@ -132,7 +132,7 @@ async def confirm_forgot_password(request:Request):
         print(e)
         return e
 
-@app.post("/cognito/login")
+@app.post("/authenticator/login")
 async def login(request:Request):
     try:
         response_dict = dict(await request.json())
