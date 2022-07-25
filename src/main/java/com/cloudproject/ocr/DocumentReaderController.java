@@ -15,7 +15,7 @@ class DocumentReaderController {
     @Autowired
     private DocumentReaderService documentReaderService;
 
-    @PostMapping("/image/details")
+    @PostMapping("/extractor")
     public OCRResponseModel getImageDetails(@RequestParam("file") MultipartFile file, @RequestParam("username") String username) {
 
 
@@ -24,7 +24,7 @@ class DocumentReaderController {
 
     }
 
-    @GetMapping("/test")
+    @GetMapping("/")
     public String getImageDetails() {return "success";}
 
 }
