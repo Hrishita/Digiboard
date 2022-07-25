@@ -29,7 +29,7 @@ CORS(app)
 
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
 
-S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "digiboard-data")
+S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "digiboard-bucket")
 S3_BUCKET_PASSPORT_FOLDER_NAME = os.getenv("S3_BUCKET_PASSPORT_FOLDER_NAME", "passport")
 S3_BUCKET_CAPTURE_FOLDER_NAME = os.getenv("S3_BUCKET_CAPTURE_FOLDER_NAME", "capture")
 
@@ -57,22 +57,15 @@ def start_process():
   if tar_image is None or tar_image == "":
     return jsonify({"error": "Image is missing. Send data URI for image"}), 400
 
-  logging.info("Username: " + username)
-
   try:
     tar_image = base64.b64decode(tar_image.split(",", 1)[1])
     TARGET_IMAGE_KEY = S3_BUCKET_CAPTURE_FOLDER_NAME + "/" + username
     SOURCE_IMAGE_KEY = S3_BUCKET_PASSPORT_FOLDER_NAME + "/" + username
 
-    # src_image = read_source_image_from_s3(SOURCE_IMAGE_KEY)
-    # if src_image is None:
-    #   return jsonify({"error": "Error while reading source image from S3"}), 500
-
     is_uploaded = upload_target_image_to_s3(TARGET_IMAGE_KEY, tar_image)
     if not is_uploaded:
       return jsonify({"error": "Error while uploading target image to S3"}), 500
 
-    # compare_result = compare_images_with_bytes(src_image, tar_image)
     compare_result = compare_images_with_s3(SOURCE_IMAGE_KEY, TARGET_IMAGE_KEY)
     if compare_result is None:
       return jsonify({"error": "Error while comparing images"}), 500
@@ -95,17 +88,6 @@ def home():
   logging.info("Comparator is ready to take requests!")
   return "Comparator is ready to take requests.", 200
 
-def read_source_image_from_s3(key):
-  try:
-    s3_client = boto3.client(service_name="s3", region_name = AWS_REGION)
-    
-    response = s3_client.get_object(Bucket=S3_BUCKET_NAME, Key=key)
-    file_content = response.get('Body').read()
-    return file_content
-  except Exception as e:
-    logging.error("Exception while reading file from S3: " + str(e))
-    return None
-
 def upload_target_image_to_s3(key, file):
   try:
     s3_client = boto3.client(service_name="s3", region_name = AWS_REGION)
@@ -118,32 +100,6 @@ def upload_target_image_to_s3(key, file):
   except Exception as e:
     logging.error("Exception while uploading file to S3: " + str(e))
     return False
-
-def compare_images_with_bytes(src_image, tar_image):
-  try:
-    rekognition_client = boto3.client(service_name="rekognition", region_name = AWS_REGION)
-    
-    logging.info("Hit AWS Rekognition API with bytes of images")
-    response = rekognition_client.compare_faces(
-      SourceImage={'Bytes': src_image},
-      TargetImage={'Bytes': tar_image},
-      SimilarityThreshold=REKOGNITION_SIMILARITY_THRESHOLD
-    )
-    face_matched = len(response['FaceMatches']) > 0
-
-    similarity = 0
-    if face_matched:
-      similarity = response['FaceMatches'][0]['Similarity']
-
-    data = { "face_matched": face_matched, "similarity": Decimal(similarity) }
-
-    logging.info('Face matched: ' + str(face_matched))
-    logging.info('Similarity: ' + str(similarity))
-
-    return data
-  except Exception as e:
-    logging.error("Exception while comparing images with Rekognition: " + str(e))
-    return None
 
 def compare_images_with_s3(source_image_key, target_image_key):
   try:
