@@ -64,8 +64,8 @@ const Login = () => {
           message: error['Message'],
         })
       } else {
-        navigate("/upload-passport");
-        
+        navigate("/capture-image");
+
       console.log('Access Token:'+response.data.response.AuthenticationResult.AccessToken)
       console.log('Refresh Token:'+response.data.response.AuthenticationResult.RefreshToken)
       console.log('Id Token:'+response.data.response.AuthenticationResult.IdToken)
