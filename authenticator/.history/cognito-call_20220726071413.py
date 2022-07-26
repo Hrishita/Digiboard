@@ -28,8 +28,6 @@ client_id=  '58n6cjdtj6puf0o00islb1tsjb',
 client = boto3.client('cognito-idp',
         region_name = 'us-east-1')
 
-ddb_client = boto3.client('dynamodb')
-
 db_client = boto3.resource('dynamodb',
         region_name = 'us-east-1')
 
@@ -160,9 +158,16 @@ async def login(request:Request):
         
         )
         if response['ResponseMetadata']['HTTPStatusCode'] == 200:
-            ddb_response =table.scan()
-
-            return {'status': 'success', 'message': 'Login successfully','response': ddb_response['Items'][0]}
+            ddb_response = client.get_item(
+                Key={
+                    'email': {
+                        'S': email,
+                    }
+                },
+                TableName=TABLE_NAME,
+            )
+            print(ddb_response)
+            return {'status': 'success', 'message': 'User created successfully','response':response}
         else:
             return {'status': 'error', 'message': 'User creation failed','response':response}
     except Exception as e:

@@ -49,7 +49,7 @@ const DataIntegrityChecks: React.FC = (props) => {
           variant="contained"
           className="button-back"
           onClick={() => {
-            navigate("/profilelist");
+            navigate("/capture-image");
           }}
         >
           Next

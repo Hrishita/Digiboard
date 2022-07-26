@@ -161,7 +161,7 @@ async def login(request:Request):
         )
         if response['ResponseMetadata']['HTTPStatusCode'] == 200:
             ddb_response =table.scan()
-
+            
             return {'status': 'success', 'message': 'Login successfully','response': ddb_response['Items'][0]}
         else:
             return {'status': 'error', 'message': 'User creation failed','response':response}

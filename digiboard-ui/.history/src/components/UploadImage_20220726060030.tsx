@@ -9,14 +9,10 @@ import { Alert } from "@mui/material";
 import passportImage from "../assets/passport.png";
 import { API_ENDPOINT } from "../const";
 
-import {useCookies}   from 'react-cookie';
-
 function UploadImage() {
   const navigate = useNavigate();
   const [files, setFiles] = useState(""); //store file
   const [alert, setAlert] = useState(""); //alert
-
-  const [cookie, setCookie] = useCookies()
 
   const selectFiles = (event: any) => {
     setFiles(event.target.files);
@@ -31,7 +27,6 @@ function UploadImage() {
 
         let formData = new FormData();
         formData.append("file", currentFile);
-        formData.append("username", cookie.username);
 
         axios
           .post(`${API_ENDPOINT}/extractor`, formData, {

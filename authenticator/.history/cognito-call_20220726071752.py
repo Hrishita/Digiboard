@@ -160,9 +160,16 @@ async def login(request:Request):
         
         )
         if response['ResponseMetadata']['HTTPStatusCode'] == 200:
-            ddb_response =table.scan()
-
-            return {'status': 'success', 'message': 'Login successfully','response': ddb_response['Items'][0]}
+            ddb_response = ddb_client.get_item(
+                Key={
+                    'email': {
+                        'S': email,
+                    }
+                },
+                TableName=TABLE_NAME,
+            )
+            print(ddb_response)
+            return {'status': 'success', 'message': 'User created successfully','response':response}
         else:
             return {'status': 'error', 'message': 'User creation failed','response':response}
     except Exception as e:
