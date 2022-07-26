@@ -32,6 +32,11 @@ Parameters:
     Default: digiboard-bucket
     Description: "Name of the S3 Bucket for the project"
 
+  S3BucketPublicFolderName:
+    Type: String
+    Default: admin-report
+    Description: "Name of the folder of S3 Bucket which is made to be public"
+
   CognitoDomain:
     Type: String
     MinLength: 3
@@ -94,7 +99,26 @@ Resources:
         BlockPublicAcls: true
         BlockPublicPolicy: true
         IgnorePublicAcls: true
-        RestrictPublicBuckets: true
+        RestrictPublicBuckets: false
+
+  S3BucketPolicy:
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      Bucket: !Ref S3BucketName
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Principal: "*"
+            Action: "s3:GetObject"
+            Resource:
+              !Join
+                - ''
+                - - 'arn:aws:s3:::'
+                  - !Ref S3BucketName
+                  - '/'
+                  - !Ref S3BucketPublicFolderName
+                  - '/*'
+            Effect: "Allow"
 
   # DynamoDB
   DynamoDBTableUsers:
