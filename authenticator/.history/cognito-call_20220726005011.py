@@ -39,7 +39,7 @@ table = db_client.Table(TABLE_NAME)
 async def sign_up():
     return "Cognito container is working"
 
-@app.post("/authenticator/sign-up",status_code=status.HTTP_200_OK)
+@app.post("/authenticator/sign-up")
 async def sign_up_cognito(request: Request):
     try:
         print("Sign up request")
@@ -70,7 +70,7 @@ async def sign_up_cognito(request: Request):
         print(e)
         return e
     
-@app.post("/authenticator/confirm-code",status_code=status.HTTP_200_OK)
+@app.post("/authenticator/confirm-code")
 async def confirm_signup(request:Request):
     try:
         print("Confirm sign up request")
@@ -93,7 +93,7 @@ async def confirm_signup(request:Request):
         print(e)
         return e
 
-@app.post("/authenticator/forgot-password",status_code=status.HTTP_200_OK)
+@app.post("/authenticator/forgot-password")
 async def forgot_password(request:Request):
     try:
         print("Forgot password request")
@@ -112,7 +112,7 @@ async def forgot_password(request:Request):
         print(e)
         return e
 
-@app.post("/authenticator/confirm-forgot-password",status_code=status.HTTP_200_OK)
+@app.post("/authenticator/confirm-forgot-password")
 async def confirm_forgot_password(request:Request):
     try:
         print("Confirm forgot password request")
@@ -137,7 +137,7 @@ async def confirm_forgot_password(request:Request):
         print(e)
         return e
 
-@app.post("/authenticator/login",status_code=status.HTTP_200_OK)
+@app.post("/authenticator/login")
 async def login(request:Request):
     try:
         print("Login request")

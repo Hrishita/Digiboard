@@ -35,14 +35,13 @@ table = db_client.Table(TABLE_NAME)
 
 #https://github.com/parisnakitakejser/video-tutorial-python-code
 
-@app.get("/cognito", status_code=status.HTTP_200_OK)
+@app.get("/", status_code=status.HTTP_200_OK)
 async def sign_up():
     return "Cognito container is working"
 
-@app.post("/authenticator/sign-up",status_code=status.HTTP_200_OK)
+@app.post("/authenticator/sign-up")
 async def sign_up_cognito(request: Request):
     try:
-        print("Sign up request")
         response_dict = dict(await request.json())
         username = response_dict['email']
         password  =response_dict['password']
@@ -55,7 +54,6 @@ async def sign_up_cognito(request: Request):
         )
         if response['ResponseMetadata']['HTTPStatusCode'] == 200:
             db_response = table.put_item(
-                print("Sign up successful")
                 Item = {
                     'username': response['UserSub'],
                     'email': username
@@ -70,10 +68,9 @@ async def sign_up_cognito(request: Request):
         print(e)
         return e
     
-@app.post("/authenticator/confirm-code",status_code=status.HTTP_200_OK)
+@app.post("/authenticator/confirm-code")
 async def confirm_signup(request:Request):
     try:
-        print("Confirm sign up request")
         response_dict = dict(await request.json())
         username = response_dict['email']
         confirm_code = response_dict.get('confirmation_code')
@@ -85,7 +82,6 @@ async def confirm_signup(request:Request):
 
         )
         if response['ResponseMetadata']['HTTPStatusCode'] == 200:
-            print("Confirm sign up successful")
             return {'status': 'success', 'message': 'User created successfully','response':response}
         else:
             return {'status': 'error', 'message': 'User creation failed','response':response}
@@ -93,10 +89,10 @@ async def confirm_signup(request:Request):
         print(e)
         return e
 
-@app.post("/authenticator/forgot-password",status_code=status.HTTP_200_OK)
+@app.post("/authenticator/forgot-password")
 async def forgot_password(request:Request):
     try:
-        print("Forgot password request")
+
         response_dict = dict(await request.json())
         username = response_dict['email']
         response = client.forgot_password(
@@ -112,10 +108,9 @@ async def forgot_password(request:Request):
         print(e)
         return e
 
-@app.post("/authenticator/confirm-forgot-password",status_code=status.HTTP_200_OK)
+@app.post("/authenticator/confirm-forgot-password")
 async def confirm_forgot_password(request:Request):
     try:
-        print("Confirm forgot password request")
         response_dict = dict(await request.json())
         email = response_dict['email']
         print(email)
@@ -137,10 +132,9 @@ async def confirm_forgot_password(request:Request):
         print(e)
         return e
 
-@app.post("/authenticator/login",status_code=status.HTTP_200_OK)
+@app.post("/authenticator/login")
 async def login(request:Request):
     try:
-        print("Login request")
         response_dict = dict(await request.json())
         email = response_dict['email']
         password = response_dict['password']    
