@@ -1,0 +1,1073 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: "AWS::Serverless-2016-10-31"
+Description: Cloudformation file to create VPC, VPC Endpoint, Security Group, Target Group, Application Load Balancer, Listener, Listener Rule, Cloudwatch Log Groups, Task Definition, ECS Cluster, ECS Service
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: digiboard
+    Description: "This value will added as prefix in resource name"
+
+  UIRepositoryName:
+    Type: String
+    Default: digiboard-ui
+    Description: "Name of the ECR Repository of UI microservice"
+
+  AuthenticatorRepositoryName:
+    Type: String
+    Default: authenticator
+    Description: "Name of the ECR Repository of Authenticator microservice"
+
+  ExtractorRepositoryName:
+    Type: String
+    Default: extractor
+    Description: "Name of the ECR Repository of Extractor microservice"
+
+  ComparatorRepositoryName:
+    Type: String
+    Default: comparator
+    Description: "Name of the ECR Repository of Comparator microservice"
+
+  UIPort:
+    Type: Number
+    Default: 80
+    Description: "Port on which the UI microservice listens"
+
+  AuthenticatorPort:
+    Type: Number
+    Default: 5000
+    Description: "Port on which the Authenticator microservice listens"
+
+  ExtractorPort:
+    Type: Number
+    Default: 8082
+    Description: "Port on which the Extractor microservice listens"
+
+  ComparatorPort:
+    Type: Number
+    Default: 5000
+    Description: "Port on which the Comparator microservice listens"
+
+  LambdaZippedCodeS3Link:
+    Type: String
+    Default: s3://digiboard-bucket/report_generation_lambda.zip
+    Description: Link of the Zip file for lambda uploaded in S3 Bucket.
+
+
+Mappings: 
+# Hard values for the subnet masks. These masks define
+# the range of internal IP addresses that can be assigned.
+# The VPC can have all IP's from 10.0.0.0 to 10.0.255.255
+# There are four subnets which cover the ranges:
+#
+# 10.0.0.0 - 10.0.0.255
+# 10.0.1.0 - 10.0.1.255
+# 10.0.2.0 - 10.0.2.255
+# 10.0.3.0 - 10.0.3.255
+#
+# If you need more IP addresses (perhaps you have so many
+# instances that you run out) then you can customize these
+# ranges to add more
+  SubnetConfig:
+    VPC:
+      CIDR: '10.0.0.0/16'
+    PublicOne:
+      CIDR: '10.0.0.0/24'
+    PublicTwo:
+      CIDR: '10.0.1.0/24'
+    PrivateOne:
+      CIDR: '10.0.100.0/24'
+    PrivateTwo:
+      CIDR: '10.0.101.0/24'
+
+Resources:
+  DigiboardVPC:
+    Type: "AWS::EC2::VPC"
+    Properties:
+      CidrBlock: !FindInMap ['SubnetConfig', 'VPC', 'CIDR']
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: "Name"
+          Value: "Digiboard VPC"
+
+  InternetGateway:
+    Type: "AWS::EC2::InternetGateway"
+    Properties:
+      Tags:
+        - Key: "Name"
+          Value: "InternetGateway"
+
+  IGWAttachment:
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties:
+      VpcId:
+        Ref: "DigiboardVPC"
+      InternetGatewayId:
+        Ref: "InternetGateway"
+
+  PublicSubnet1:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      CidrBlock: !FindInMap ['SubnetConfig', 'PublicOne', 'CIDR']
+      MapPublicIpOnLaunch: true
+      VpcId:
+        Ref: "DigiboardVPC"
+      Tags:
+        - Key: "Name"
+          Value: "Digiboard Public Subnet 1"
+      AvailabilityZone:
+        Fn::Select:
+          - "0"
+          - Fn::GetAZs:
+              Ref: "AWS::Region"
+
+  PublicSubnet2:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      CidrBlock: !FindInMap ['SubnetConfig', 'PublicTwo', 'CIDR']
+      MapPublicIpOnLaunch: true
+      VpcId:
+        Ref: "DigiboardVPC"
+      Tags:
+        - Key: "Name"
+          Value: "Digiboard Public Subnet 2"
+      AvailabilityZone:
+        Fn::Select:
+          - "1"
+          - Fn::GetAZs:
+              Ref: "AWS::Region"
+
+  PrivateSubnet1:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      CidrBlock: !FindInMap ['SubnetConfig', 'PrivateOne', 'CIDR']
+      MapPublicIpOnLaunch: false
+      VpcId:
+        Ref: "DigiboardVPC"
+      Tags:
+        - Key: "Name"
+          Value: "Digiboard Private Subnet 1"
+      AvailabilityZone:
+        Fn::Select:
+          - "0"
+          - Fn::GetAZs:
+              Ref: "AWS::Region"
+
+  PrivateSubnet2:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      CidrBlock: !FindInMap ['SubnetConfig', 'PrivateTwo', 'CIDR']
+      MapPublicIpOnLaunch: false
+      VpcId:
+        Ref: "DigiboardVPC"
+      Tags:
+        - Key: "Name"
+          Value: "Digiboard Private Subnet 2"
+      AvailabilityZone:
+        Fn::Select:
+          - "1"
+          - Fn::GetAZs:
+              Ref: "AWS::Region"
+
+  RouteTablePublic:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId:
+        Ref: "DigiboardVPC"
+      Tags:
+        - Key: "Name"
+          Value: "Digiboard Public Route Table"
+
+  RouteTablePublicAssociation1:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId:
+        Ref: "RouteTablePublic"
+      SubnetId:
+        Ref: "PublicSubnet1"
+
+  RouteTablePublicAssociation2:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId:
+        Ref: "RouteTablePublic"
+      SubnetId:
+        Ref: "PublicSubnet2"
+
+  RouteTablePublicRoute0:
+    Type: "AWS::EC2::Route"
+    Properties:
+      DestinationCidrBlock: "0.0.0.0/0"
+      RouteTableId:
+        Ref: "RouteTablePublic"
+      GatewayId:
+        Ref: "InternetGateway"
+
+  RouteTablePrivate1:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId:
+        Ref: "DigiboardVPC"
+      Tags:
+        - Key: "Name"
+          Value: "Digiboard Private Route Table 1"
+
+  RouteTablePrivate1Association1:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId:
+        Ref: "RouteTablePrivate1"
+      SubnetId:
+        Ref: "PrivateSubnet1"
+
+  RouteTablePrivate2:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId:
+        Ref: "DigiboardVPC"
+      Tags:
+        - Key: "Name"
+          Value: "Digiboard Private Route Table 2"
+
+  RouteTablePrivate2Association1:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId:
+        Ref: "RouteTablePrivate2"
+      SubnetId:
+        Ref: "PrivateSubnet2"
+
+  ALBSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "Digiboard's security group for Application Load Balancer"
+      VpcId:
+        Ref: "DigiboardVPC"
+      SecurityGroupEgress:
+        - FromPort: 0
+          ToPort: 65535
+          IpProtocol: "-1"
+          Description: ""
+          CidrIp: "0.0.0.0/0"
+      SecurityGroupIngress:
+        - FromPort: 80
+          ToPort: 80
+          IpProtocol: "tcp"
+          Description: ""
+          CidrIp: "0.0.0.0/0"
+      GroupName: "digiboard-alb-security-group"
+
+  ContainerSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "Digiboard's security group for Container running inside ECS"
+      VpcId:
+        Ref: "DigiboardVPC"
+      SecurityGroupEgress:
+        - FromPort: 0
+          ToPort: 65535
+          IpProtocol: "-1"
+          Description: ""
+          CidrIp: "0.0.0.0/0"
+      SecurityGroupIngress:
+        - FromPort: !Ref UIPort
+          ToPort: !Ref UIPort
+          IpProtocol: "tcp"
+          Description: ""
+          CidrIp: "0.0.0.0/0"
+        # Authenticator or Comparators port 
+        - FromPort: !Ref AuthenticatorPort
+          ToPort: !Ref AuthenticatorPort
+          IpProtocol: "tcp"
+          Description: ""
+          CidrIp: "0.0.0.0/0"
+        - FromPort: !Ref ExtractorPort
+          ToPort: !Ref ExtractorPort
+          IpProtocol: "tcp"
+          Description: ""
+          CidrIp: "0.0.0.0/0"
+      GroupName: "digiboard-container-security-group"
+
+  VPCEndpointSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "Digiboard's security group for VPC Endpoints"
+      VpcId:
+        Ref: "DigiboardVPC"
+      SecurityGroupEgress:
+        - FromPort: 0
+          ToPort: 65535
+          IpProtocol: "tcp"
+          Description: ""
+          CidrIp: "0.0.0.0/0"
+      SecurityGroupIngress:
+        - FromPort: 443
+          ToPort: 443
+          IpProtocol: "tcp"
+          Description: ""
+          CidrIp: "0.0.0.0/0"
+        - FromPort: 80
+          ToPort: 80
+          IpProtocol: "tcp"
+          Description: ""
+          SourceSecurityGroupId:
+            Ref: "ALBSecurityGroup"
+      GroupName: "digiboard-vpc-endpoints-security-group"
+
+  VPCEndpointS3Gateway:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName:
+        Fn::Join:
+          - ""
+          -
+            - "com.amazonaws."
+            - Ref: "AWS::Region"
+            - ".s3"
+      VpcId:
+        Ref: "DigiboardVPC"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal: "*"
+            Action:
+              - "*"
+            Resource:
+              - "*"
+      RouteTableIds:
+        - !Ref RouteTablePrivate1
+        - !Ref RouteTablePrivate2
+
+  VPCEndpointDynamoDB:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName:
+        Fn::Join:
+          - ""
+          -
+            - "com.amazonaws."
+            - Ref: "AWS::Region"
+            - ".dynamodb"
+      VpcId:
+        Ref: "DigiboardVPC"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal: "*"
+            Action:
+              - "*"
+            Resource:
+              - "*"
+      RouteTableIds:
+        - !Ref RouteTablePrivate1
+        - !Ref RouteTablePrivate2
+
+  VPCEndpointS3Interface:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      VpcEndpointType: "Interface"
+      ServiceName:
+        Fn::Join:
+          - ""
+          -
+            - "com.amazonaws."
+            - Ref: "AWS::Region"
+            - ".s3"
+      VpcId:
+        Ref: "DigiboardVPC"
+      SubnetIds:
+        - Ref: "PrivateSubnet1"
+        - Ref: "PrivateSubnet2"
+      SecurityGroupIds:
+        - Ref: "VPCEndpointSecurityGroup"
+
+  VPCEndpointECRAPI:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      VpcEndpointType: "Interface"
+      ServiceName:
+        Fn::Join:
+          - ""
+          -
+            - "com.amazonaws."
+            - Ref: "AWS::Region"
+            - ".ecr.api"
+      VpcId:
+        Ref: "DigiboardVPC"
+      SubnetIds:
+        - Ref: "PrivateSubnet1"
+        - Ref: "PrivateSubnet2"
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - Ref: "VPCEndpointSecurityGroup"
+
+  VPCEndpointECRDKR:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      VpcEndpointType: "Interface"
+      ServiceName:
+        Fn::Join:
+          - ""
+          -
+            - "com.amazonaws."
+            - Ref: "AWS::Region"
+            - ".ecr.dkr"
+      VpcId:
+        Ref: "DigiboardVPC"
+      SubnetIds:
+        - Ref: "PrivateSubnet1"
+        - Ref: "PrivateSubnet2"
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - Ref: "VPCEndpointSecurityGroup"
+
+  VPCEndpointLogs:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      VpcEndpointType: "Interface"
+      ServiceName:
+        Fn::Join:
+          - ""
+          -
+            - "com.amazonaws."
+            - Ref: "AWS::Region"
+            - ".logs"
+      VpcId:
+        Ref: "DigiboardVPC"
+      SubnetIds:
+        - Ref: "PrivateSubnet1"
+        - Ref: "PrivateSubnet2"
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - Ref: "VPCEndpointSecurityGroup"
+
+  VPCEndpointSecretsmanager:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      VpcEndpointType: "Interface"
+      ServiceName:
+        Fn::Join:
+          - ""
+          -
+            - "com.amazonaws."
+            - Ref: "AWS::Region"
+            - ".secretsmanager"
+      VpcId:
+        Ref: "DigiboardVPC"
+      SubnetIds:
+        - Ref: "PrivateSubnet1"
+        - Ref: "PrivateSubnet2"
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - Ref: "VPCEndpointSecurityGroup"
+
+  VPCEndpointSSM:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      VpcEndpointType: "Interface"
+      ServiceName:
+        Fn::Join:
+          - ""
+          -
+            - "com.amazonaws."
+            - Ref: "AWS::Region"
+            - ".ssm"
+      VpcId:
+        Ref: "DigiboardVPC"
+      SubnetIds:
+        - Ref: "PrivateSubnet1"
+        - Ref: "PrivateSubnet2"
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - Ref: "VPCEndpointSecurityGroup"
+
+  VPCEndpointRekognition:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      VpcEndpointType: "Interface"
+      ServiceName:
+        Fn::Join:
+          - ""
+          -
+            - "com.amazonaws."
+            - Ref: "AWS::Region"
+            - ".rekognition"
+      VpcId:
+        Ref: "DigiboardVPC"
+      SubnetIds:
+        - Ref: "PrivateSubnet1"
+        - Ref: "PrivateSubnet2"
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - Ref: "VPCEndpointSecurityGroup"
+
+  VPCEndpointTextract:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      VpcEndpointType: "Interface"
+      ServiceName:
+        Fn::Join:
+          - ""
+          -
+            - "com.amazonaws."
+            - Ref: "AWS::Region"
+            - ".textract"
+      VpcId:
+        Ref: "DigiboardVPC"
+      SubnetIds:
+        - Ref: "PrivateSubnet1"
+        - Ref: "PrivateSubnet2"
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - Ref: "VPCEndpointSecurityGroup"
+
+  # ALB, Target groups, listeners, and rules
+  ApplicationLoadBalancer:
+    Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
+    Properties:
+      Name: "digiboard-alb"
+      Type: "application"
+      Scheme: "internet-facing"
+      IpAddressType: "ipv4"
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      Tags:
+        - Key: "Name"
+          Value: "Digiboard application load balancer"
+      LoadBalancerAttributes:
+        - Key: "deletion_protection.enabled"
+          Value: false
+        - Key: "access_logs.s3.enabled"
+          Value: false
+        - Key: "idle_timeout.timeout_seconds"
+          Value: 60
+        - Key: "routing.http.desync_mitigation_mode"
+          Value: "defensive"
+        - Key: "routing.http.drop_invalid_header_fields.enabled"
+          Value: false
+        - Key: "routing.http.x_amzn_tls_version_and_cipher_suite.enabled"
+          Value: false
+        - Key: "routing.http.xff_client_port.enabled"
+          Value: false
+        - Key: "routing.http2.enabled"
+          Value: true
+        - Key: "waf.fail_open.enabled"
+          Value: false
+
+  UITargetGroup:
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Properties:
+      Name: "digiboard-ui-target-group"
+      TargetType: "ip"
+      VpcId:
+        Ref: "DigiboardVPC"
+      Protocol: "HTTP"
+      ProtocolVersion: "HTTP1"
+      Port: !Ref UIPort
+      HealthCheckEnabled: true
+      HealthCheckPath: "/"
+      HealthCheckIntervalSeconds: 30
+      HealthCheckProtocol: "HTTP"
+      HealthCheckPort: !Ref UIPort
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 5
+      UnhealthyThresholdCount: 2
+      Matcher:
+        HttpCode: "200"
+
+  AuthenticatorTargetGroup:
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Properties:
+      Name: "digiboard-authenticator-target-group"
+      TargetType: "ip"
+      VpcId:
+        Ref: "DigiboardVPC"
+      Protocol: "HTTP"
+      ProtocolVersion: "HTTP1"
+      Port: !Ref AuthenticatorPort
+      HealthCheckEnabled: true
+      HealthCheckPath: "/"
+      HealthCheckIntervalSeconds: 30
+      HealthCheckProtocol: "HTTP"
+      HealthCheckPort: !Ref AuthenticatorPort
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 5
+      UnhealthyThresholdCount: 2
+      Matcher:
+        HttpCode: "200"
+
+  ComparatorTargetGroup:
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Properties:
+      Name: "digiboard-comparator-target-group"
+      TargetType: "ip"
+      VpcId:
+        Ref: "DigiboardVPC"
+      Protocol: "HTTP"
+      ProtocolVersion: "HTTP1"
+      Port: !Ref ComparatorPort
+      HealthCheckEnabled: true
+      HealthCheckPath: "/"
+      HealthCheckIntervalSeconds: 30
+      HealthCheckProtocol: "HTTP"
+      HealthCheckPort: !Ref ComparatorPort
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 5
+      UnhealthyThresholdCount: 2
+      Matcher:
+        HttpCode: "200"
+
+  ExtractorTargetGroup:
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Properties:
+      Name: "digiboard-extractor-target-group"
+      TargetType: "ip"
+      VpcId:
+        Ref: "DigiboardVPC"
+      Protocol: "HTTP"
+      ProtocolVersion: "HTTP1"
+      Port: !Ref ExtractorPort
+      HealthCheckEnabled: true
+      HealthCheckPath: "/"
+      HealthCheckIntervalSeconds: 30
+      HealthCheckProtocol: "HTTP"
+      HealthCheckPort: !Ref ExtractorPort
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 5
+      UnhealthyThresholdCount: 2
+      Matcher:
+        HttpCode: "200"
+
+  ApplicationLoadBalancerListener:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+      LoadBalancerArn:
+        Ref: "ApplicationLoadBalancer"
+      Protocol: "HTTP"
+      Port: 80
+      DefaultActions:
+        - Type: "forward"
+          ForwardConfig:
+            TargetGroups:
+              - TargetGroupArn:
+                  Ref: "UITargetGroup"
+                Weight: 1
+
+  ListenerRuleAuthenticator:
+    Type: 'AWS::ElasticLoadBalancingV2::ListenerRule'
+    Properties:
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref AuthenticatorTargetGroup
+      Conditions:
+        - Field: path-pattern
+          PathPatternConfig:
+            Values:
+              - /authenticator*
+      ListenerArn: !Ref ApplicationLoadBalancerListener
+      Priority: 1
+
+  ListenerRuleExtractor:
+    Type: 'AWS::ElasticLoadBalancingV2::ListenerRule'
+    Properties:
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref ExtractorTargetGroup
+      Conditions:
+        - Field: path-pattern
+          PathPatternConfig:
+            Values:
+              - /extractor*
+      ListenerArn: !Ref ApplicationLoadBalancerListener
+      Priority: 2
+
+  ListenerRuleComparator:
+    Type: 'AWS::ElasticLoadBalancingV2::ListenerRule'
+    Properties:
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref ComparatorTargetGroup
+      Conditions:
+        - Field: path-pattern
+          PathPatternConfig:
+            Values:
+              - /comparator*
+      ListenerArn: !Ref ApplicationLoadBalancerListener
+      Priority: 3
+
+  # Cloudwatch Log Groups
+  UICloudWatchLogsGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: UICloudWatchLogsGroup
+      RetentionInDays: 365
+
+  AuthenticatorCloudWatchLogsGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: AuthenticatorCloudWatchLogsGroup
+      RetentionInDays: 365
+
+  ComparatorCloudWatchLogsGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: ComparatorCloudWatchLogsGroup
+      RetentionInDays: 365
+
+  ExtractorCloudWatchLogsGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: ExtractorCloudWatchLogsGroup
+      RetentionInDays: 365
+
+  # Task Definition
+  UITaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      RequiresCompatibilities:
+        - "FARGATE"
+      Tags:
+        - Key: "Name"
+          Value: "digiboard-ui-task-definition"
+      TaskRoleArn:
+        !Join
+          - ''
+          - - 'arn:'
+            - !Ref AWS::Partition
+            - ':iam::'
+            - !Ref AWS::AccountId
+            - ':role/LabRole'
+      ExecutionRoleArn:
+        !Join
+          - ''
+          - - 'arn:'
+            - !Ref AWS::Partition
+            - ':iam::'
+            - !Ref AWS::AccountId
+            - ':role/LabRole'
+      Cpu: 256
+      Memory: 512
+      NetworkMode: "awsvpc"
+      ContainerDefinitions:
+        - Name: !Ref UIRepositoryName
+          Image:
+            !Join
+              - ''
+              - - !Ref AWS::AccountId
+                - '.dkr.ecr.'
+                - !Ref AWS::Region
+                - '.amazonaws.com/'
+                - !Ref UIRepositoryName
+                - ':latest'
+          MemoryReservation: 256
+          Memory: 512
+          PortMappings:
+            - ContainerPort: !Ref UIPort
+              Protocol: tcp
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-create-group: true
+              awslogs-stream-prefix: 'UILogs'
+              awslogs-group: !Ref UICloudWatchLogsGroup
+              awslogs-region: !Ref AWS::Region
+
+  AuthenticatorTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      RequiresCompatibilities:
+        - "FARGATE"
+      Tags:
+        - Key: "Name"
+          Value: "authenticator-task-definition"
+      TaskRoleArn:
+        !Join
+          - ''
+          - - 'arn:'
+            - !Ref AWS::Partition
+            - ':iam::'
+            - !Ref AWS::AccountId
+            - ':role/LabRole'
+      ExecutionRoleArn:
+        !Join
+          - ''
+          - - 'arn:'
+            - !Ref AWS::Partition
+            - ':iam::'
+            - !Ref AWS::AccountId
+            - ':role/LabRole'
+      Cpu: 256
+      Memory: 512
+      NetworkMode: "awsvpc"
+      ContainerDefinitions:
+        - Name: !Ref AuthenticatorRepositoryName
+          Image:
+            !Join
+              - ''
+              - - !Ref AWS::AccountId
+                - '.dkr.ecr.'
+                - !Ref AWS::Region
+                - '.amazonaws.com/'
+                - !Ref AuthenticatorRepositoryName
+                - ':latest'
+          MemoryReservation: 256
+          Memory: 512
+          PortMappings:
+            - ContainerPort: !Ref AuthenticatorPort
+              Protocol: tcp
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-create-group: true
+              awslogs-stream-prefix: 'AuthenticatorLogs'
+              awslogs-group: !Ref AuthenticatorCloudWatchLogsGroup
+              awslogs-region: !Ref AWS::Region
+
+  ComparatorTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      RequiresCompatibilities:
+        - "FARGATE"
+      Tags:
+        - Key: "Name"
+          Value: "comparator-task-definition"
+      TaskRoleArn:
+        !Join
+          - ''
+          - - 'arn:'
+            - !Ref AWS::Partition
+            - ':iam::'
+            - !Ref AWS::AccountId
+            - ':role/LabRole'
+      ExecutionRoleArn:
+        !Join
+          - ''
+          - - 'arn:'
+            - !Ref AWS::Partition
+            - ':iam::'
+            - !Ref AWS::AccountId
+            - ':role/LabRole'
+      Cpu: 256
+      Memory: 512
+      NetworkMode: "awsvpc"
+      ContainerDefinitions:
+        - Name: !Ref ComparatorRepositoryName
+          Image:
+            !Join
+              - ''
+              - - !Ref AWS::AccountId
+                - '.dkr.ecr.'
+                - !Ref AWS::Region
+                - '.amazonaws.com/'
+                - !Ref ComparatorRepositoryName
+                - ':latest'
+          MemoryReservation: 256
+          Memory: 512
+          PortMappings:
+            - ContainerPort: !Ref ComparatorPort
+              Protocol: tcp
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-create-group: true
+              awslogs-stream-prefix: 'ComparatorLogs'
+              awslogs-group: !Ref ComparatorCloudWatchLogsGroup
+              awslogs-region: !Ref AWS::Region
+
+  ExtractorTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      RequiresCompatibilities:
+        - "FARGATE"
+      Tags:
+        - Key: "Name"
+          Value: "extractor-task-definition"
+      TaskRoleArn:
+        !Join
+          - ''
+          - - 'arn:'
+            - !Ref AWS::Partition
+            - ':iam::'
+            - !Ref AWS::AccountId
+            - ':role/LabRole'
+      ExecutionRoleArn:
+        !Join
+          - ''
+          - - 'arn:'
+            - !Ref AWS::Partition
+            - ':iam::'
+            - !Ref AWS::AccountId
+            - ':role/LabRole'
+      Cpu: 256
+      Memory: 512
+      NetworkMode: "awsvpc"
+      ContainerDefinitions:
+        - Name: !Ref ExtractorRepositoryName
+          Image:
+            !Join
+              - ''
+              - - !Ref AWS::AccountId
+                - '.dkr.ecr.'
+                - !Ref AWS::Region
+                - '.amazonaws.com/'
+                - !Ref ExtractorRepositoryName
+                - ':latest'
+          MemoryReservation: 256
+          Memory: 512
+          PortMappings:
+            - ContainerPort: !Ref ExtractorPort
+              Protocol: tcp
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-create-group: true
+              awslogs-stream-prefix: 'ExtractorLogs'
+              awslogs-group: !Ref ExtractorCloudWatchLogsGroup
+              awslogs-region: !Ref AWS::Region
+
+  # ECS Cluster
+  DigiboardECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: 'Digiboard-ECS-Cluster'
+      Tags:
+        - Key: "Name"
+          Value: "digiboard-ecs-cluster"
+
+  # ECS Service
+  DigiboardUIService:
+    Type: AWS::ECS::Service
+    DependsOn:
+      - ApplicationLoadBalancerListener
+    Properties: 
+      ServiceName: 'UIService'
+      Cluster: !Ref DigiboardECSCluster
+      TaskDefinition: !Ref UITaskDefinition
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 100
+        MaximumPercent: 200
+      DesiredCount: 1
+      EnableECSManagedTags: true
+      HealthCheckGracePeriodSeconds: 30
+      LaunchType: FARGATE
+      NetworkConfiguration: 
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - !Ref ContainerSecurityGroup
+          Subnets:
+            - !Ref PrivateSubnet1
+            - !Ref PrivateSubnet2
+      LoadBalancers:
+        - ContainerName: !Ref UIRepositoryName
+          ContainerPort: !Ref UIPort
+          TargetGroupArn: !Ref UITargetGroup
+
+  AuthenticatorService:
+    Type: AWS::ECS::Service
+    DependsOn:
+      - ApplicationLoadBalancerListener
+    Properties: 
+      ServiceName: 'AuthenticatorService'
+      Cluster: !Ref DigiboardECSCluster
+      TaskDefinition: !Ref AuthenticatorTaskDefinition
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 100
+        MaximumPercent: 200
+      DesiredCount: 1
+      EnableECSManagedTags: true
+      HealthCheckGracePeriodSeconds: 30
+      LaunchType: FARGATE
+      NetworkConfiguration: 
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups:
+            - !Ref ContainerSecurityGroup
+          Subnets:
+            - !Ref PublicSubnet1
+            - !Ref PublicSubnet2
+      LoadBalancers:
+        - ContainerName: !Ref AuthenticatorRepositoryName
+          ContainerPort: !Ref AuthenticatorPort
+          TargetGroupArn: !Ref AuthenticatorTargetGroup
+
+  ComparatorService:
+    Type: AWS::ECS::Service
+    DependsOn:
+      - ApplicationLoadBalancerListener
+    Properties: 
+      ServiceName: 'ComparatorService'
+      Cluster: !Ref DigiboardECSCluster
+      TaskDefinition: !Ref ComparatorTaskDefinition
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 100
+        MaximumPercent: 200
+      DesiredCount: 1
+      EnableECSManagedTags: true
+      HealthCheckGracePeriodSeconds: 30
+      LaunchType: FARGATE
+      NetworkConfiguration: 
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - !Ref ContainerSecurityGroup
+          Subnets:
+            - !Ref PrivateSubnet1
+            - !Ref PrivateSubnet2
+      LoadBalancers:
+        - ContainerName: !Ref ComparatorRepositoryName
+          ContainerPort: !Ref ComparatorPort
+          TargetGroupArn: !Ref ComparatorTargetGroup
+
+  ExtractorService:
+    Type: AWS::ECS::Service
+    DependsOn:
+      - ApplicationLoadBalancerListener
+    Properties: 
+      ServiceName: 'ExtractorService'
+      Cluster: !Ref DigiboardECSCluster
+      TaskDefinition: !Ref ExtractorTaskDefinition
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 100
+        MaximumPercent: 200
+      DesiredCount: 1
+      EnableECSManagedTags: true
+      HealthCheckGracePeriodSeconds: 30
+      LaunchType: FARGATE
+      NetworkConfiguration: 
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - !Ref ContainerSecurityGroup
+          Subnets:
+            - !Ref PrivateSubnet1
+            - !Ref PrivateSubnet2
+      LoadBalancers:
+        - ContainerName: !Ref ExtractorRepositoryName
+          ContainerPort: !Ref ExtractorPort
+          TargetGroupArn: !Ref ExtractorTargetGroup
+
+  LambdaReport:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: "lambda-function-test"
+      CodeUri: !Ref LambdaZippedCodeS3Link
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.9
+      Description: ''
+      MemorySize: 128
+      Timeout: 15
+      Role:
+        !Join
+          - ''
+          - - 'arn:'
+            - !Ref AWS::Partition
+            - ':iam::'
+            - !Ref AWS::AccountId
+            - ':role/LabRole'

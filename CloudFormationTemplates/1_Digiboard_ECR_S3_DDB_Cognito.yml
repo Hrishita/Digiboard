@@ -1,0 +1,169 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Cloudformation file to create ECR Repository, S3 Bucket, Cognito User Pool, and DynamoDB Table.
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: digiboard
+    Description: "This value will added as prefix in resource name"
+
+  UIRepositoryName:
+    Type: String
+    Default: digiboard-ui
+    Description: "Name of the ECR Repository of UI microservice"
+
+  AuthenticatorRepositoryName:
+    Type: String
+    Default: authenticator
+    Description: "Name of the ECR Repository of Authenticator microservice"
+
+  ExtractorRepositoryName:
+    Type: String
+    Default: extractor
+    Description: "Name of the ECR Repository of Extractor microservice"
+
+  ComparatorRepositoryName:
+    Type: String
+    Default: comparator
+    Description: "Name of the ECR Repository of Comparator microservice"
+
+  S3BucketName:
+    Type: String
+    Default: digiboard-bucket
+    Description: "Name of the S3 Bucket for the project"
+
+  CognitoDomain:
+    Type: String
+    MinLength: 3
+    MaxLength: 63
+    Default: digiboard-cognito
+    Description: Enter a string. Must be alpha numeric 3-63 in length.
+
+  DynamoDBTableName:
+    Type: String
+    Default: digiboard-table
+    Description: "Name of the DynamoDB table for the project"
+
+Resources:
+  UIECRRepository:
+    Type: "AWS::ECR::Repository"
+    Properties:
+      RepositoryName: !Ref UIRepositoryName
+      ImageTagMutability: "MUTABLE"
+      ImageScanningConfiguration:
+        ScanOnPush: false
+      EncryptionConfiguration:
+        EncryptionType: "AES256"
+
+  AuthECRRepository:
+    Type: "AWS::ECR::Repository"
+    Properties:
+      RepositoryName: !Ref AuthenticatorRepositoryName
+      ImageTagMutability: "MUTABLE"
+      ImageScanningConfiguration:
+        ScanOnPush: false
+      EncryptionConfiguration:
+        EncryptionType: "AES256"
+
+  ComparatorECRRepository:
+    Type: "AWS::ECR::Repository"
+    Properties:
+      RepositoryName: !Ref ComparatorRepositoryName
+      ImageTagMutability: "MUTABLE"
+      ImageScanningConfiguration:
+        ScanOnPush: false
+      EncryptionConfiguration:
+        EncryptionType: "AES256"
+
+  ExtractorECRRepository:
+    Type: "AWS::ECR::Repository"
+    Properties:
+      RepositoryName: !Ref ExtractorRepositoryName
+      ImageTagMutability: "MUTABLE"
+      ImageScanningConfiguration:
+        ScanOnPush: false
+      EncryptionConfiguration:
+        EncryptionType: "AES256"
+
+  # S3 Bucket
+  S3Bucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: !Ref S3BucketName
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # DynamoDB
+  DynamoDBTableUsers:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: username
+          AttributeType: S
+      KeySchema:
+        - AttributeName: username
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+      TableName: !Ref DynamoDBTableName
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+
+  # SNS
+  SNSTopicEmail:
+    Type: "AWS::SNS::Topic"
+    Properties:
+      Subscription:
+        - Endpoint: "hrishitamavani@gmail.com"
+          Protocol: "email"
+      TopicName: "digiboard-report-generation-topic"
+
+  # Cognito
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UsernameConfiguration: 
+        CaseSensitive: false
+      AutoVerifiedAttributes:
+        - email
+      UserPoolName: !Sub ${CognitoDomain}-user-pool
+      UsernameAttributes:
+        - email
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Mutable: false
+          Required: true
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref UserPool
+      AllowedOAuthFlowsUserPoolClient: true
+      CallbackURLs:
+        - http://localhost:3000
+      AllowedOAuthFlows:
+        - code
+        - implicit
+      AllowedOAuthScopes:
+        - phone
+        - email
+        - openid
+        - profile
+      SupportedIdentityProviders:
+        - COGNITO
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_CUSTOM_AUTH
+
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Ref CognitoDomain
+      UserPoolId: !Ref UserPool
