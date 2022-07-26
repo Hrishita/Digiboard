@@ -4,9 +4,9 @@ import os
 import csv
 
 TABLE_NAME = "digiboard-data"
-OUTPUT_BUCKET = "digiboard-bucket-test"
-TEMP_FILENAME = '/tmp/export.csv'
-OUTPUT_KEY = 'export.csv'
+OUTPUT_BUCKET = "digiboard-bucket"
+TEMP_FILENAME = '/tmp/report.csv'
+OUTPUT_KEY = 'admin-report/report.csv'
 
 s3_resource = boto3.resource('s3')
 sns = boto3.client("sns", region_name="us-east-1")
@@ -15,15 +15,14 @@ table = dynamodb_resource.Table(TABLE_NAME)
 
 def lambda_handler(event, context):
     response = table.scan()
-    #df = pd.DataFrame(response['Items'])
-    #df.to_csv(TEMP_FILENAME, index=False, header=True)
+
     keys = response['Items'][0].keys()
     print(keys)
     with open(TEMP_FILENAME, 'w', newline='') as output_file:
         dict_writer = csv.DictWriter(output_file, keys)
         dict_writer.writeheader()
         dict_writer.writerows(response['Items'])
-
+    
     # Upload temp file to S3
     s3_resource.Bucket(OUTPUT_BUCKET).upload_file(TEMP_FILENAME, OUTPUT_KEY)
  
