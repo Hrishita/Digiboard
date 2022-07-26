@@ -5,6 +5,7 @@ from urllib.request import Request
 from fastapi import FastAPI, HTTPException, Request, status
 import requests
 import os
+import botocore
 import boto3
 import json
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,7 +24,7 @@ app.add_middleware(
 
 TABLE_NAME = "digiboard-data"
 
-client_id=  '58n6cjdtj6puf0o00islb1tsjb',
+client_id=  '65bjfhpbf90ljaetnt7jvfmpcd',
 
 client = boto3.client('cognito-idp',
         region_name = 'us-east-1')
@@ -37,10 +38,10 @@ table = db_client.Table(TABLE_NAME)
 
 @app.get("/", status_code=status.HTTP_200_OK)
 async def sign_up():
-    return "authenticator container is working"
+    return "Cognito container is working"
 @app.get("/authenticator", status_code=status.HTTP_200_OK)
 async def sign_up():
-    return "authenticator container is ready to accept requests"
+    return "Cognito container is ready to accept requests"
 
 @app.post("/authenticator/sign-up")
 async def sign_up_cognito(request: Request):
@@ -51,7 +52,7 @@ async def sign_up_cognito(request: Request):
         password  =response_dict['password']
 
         response = client.sign_up(
-            ClientId = '58n6cjdtj6puf0o00islb1tsjb',
+            ClientId = '65bjfhpbf90ljaetnt7jvfmpcd',
             Username = username,
             Password = password,
 
@@ -83,7 +84,7 @@ async def confirm_signup(request:Request):
         confirm_code = response_dict.get('confirmation_code')
         print(confirm_code)
         response = client.confirm_sign_up(
-            ClientId = '58n6cjdtj6puf0o00islb1tsjb',
+            ClientId = '65bjfhpbf90ljaetnt7jvfmpcd',
             Username = username,
             ConfirmationCode = confirm_code
 
@@ -104,7 +105,7 @@ async def forgot_password(request:Request):
         response_dict = dict(await request.json())
         username = response_dict['email']
         response = client.forgot_password(
-            ClientId = '58n6cjdtj6puf0o00islb1tsjb',
+            ClientId = '65bjfhpbf90ljaetnt7jvfmpcd',
             Username = username
 
         )
@@ -127,7 +128,7 @@ async def confirm_forgot_password(request:Request):
         confirmation_code = response_dict['confirmation_code']
         
         response = client.confirm_forgot_password(
-            ClientId = '58n6cjdtj6puf0o00islb1tsjb',
+            ClientId = '65bjfhpbf90ljaetnt7jvfmpcd',
             Username = email,
             ConfirmationCode = confirmation_code,
             Password = password
@@ -149,7 +150,7 @@ async def login(request:Request):
         email = response_dict['email']
         password = response_dict['password']    
         response = client.initiate_auth(
-            ClientId = '58n6cjdtj6puf0o00islb1tsjb',
+            ClientId = '65bjfhpbf90ljaetnt7jvfmpcd',
             AuthFlow = 'USER_PASSWORD_AUTH',
             AuthParameters={
                 'USERNAME' : email,
