@@ -33,7 +33,9 @@ def lambda_handler(event, context):
         url = f'https://{OUTPUT_BUCKET}.s3.amazonaws.com/{obj.key}'
         print(url)
 
-    topic_arn= "arn:aws:sns:us-east-1:223394264544:digi-report"
+    topic_arn= "arn:aws:sns:us-east-1:813278360641:digiboard-report-generation-topic"
+
+
     sns.publish(TopicArn=topic_arn, 
             Message="Hey Admin! The onboarding report is ready. Have a look by visiting the URL : "+url, 
             Subject="Report Generation Completed")

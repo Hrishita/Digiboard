@@ -23,7 +23,7 @@ app.add_middleware(
 
 TABLE_NAME = "digiboard-data"
 
-client_id=  '58n6cjdtj6puf0o00islb1tsjb',
+client_id=  '65mm0nceghc9fcetpgd9gg67k5',
 
 client = boto3.client('cognito-idp',
         region_name = 'us-east-1')
@@ -53,7 +53,7 @@ async def sign_up_cognito(request: Request):
         password  =response_dict['password']
 
         response = client.sign_up(
-            ClientId = '58n6cjdtj6puf0o00islb1tsjb',
+            ClientId = '65mm0nceghc9fcetpgd9gg67k5',
             Username = username,
             Password = password,
 
@@ -85,7 +85,7 @@ async def confirm_signup(request:Request):
         confirm_code = response_dict.get('confirmation_code')
         print(confirm_code)
         response = client.confirm_sign_up(
-            ClientId = '58n6cjdtj6puf0o00islb1tsjb',
+            ClientId = '65mm0nceghc9fcetpgd9gg67k5',
             Username = username,
             ConfirmationCode = confirm_code
 
@@ -106,7 +106,7 @@ async def forgot_password(request:Request):
         response_dict = dict(await request.json())
         username = response_dict['email']
         response = client.forgot_password(
-            ClientId = '58n6cjdtj6puf0o00islb1tsjb',
+            ClientId = '65mm0nceghc9fcetpgd9gg67k5',
             Username = username
 
         )
@@ -129,7 +129,7 @@ async def confirm_forgot_password(request:Request):
         confirmation_code = response_dict['confirmation_code']
         
         response = client.confirm_forgot_password(
-            ClientId = '58n6cjdtj6puf0o00islb1tsjb',
+            ClientId = '65mm0nceghc9fcetpgd9gg67k5',
             Username = email,
             ConfirmationCode = confirmation_code,
             Password = password
@@ -151,7 +151,7 @@ async def login(request:Request):
         email = response_dict['email']
         password = response_dict['password']    
         response = client.initiate_auth(
-            ClientId = '58n6cjdtj6puf0o00islb1tsjb',
+            ClientId = '65mm0nceghc9fcetpgd9gg67k5',
             AuthFlow = 'USER_PASSWORD_AUTH',
             AuthParameters={
                 'USERNAME' : email,
