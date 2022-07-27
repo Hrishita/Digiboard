@@ -29,7 +29,7 @@ CORS(app)
 
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
 
-S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "digiboard-bucket")
+S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "digiboard-s3-bucket")
 S3_BUCKET_PASSPORT_FOLDER_NAME = os.getenv("S3_BUCKET_PASSPORT_FOLDER_NAME", "passport")
 S3_BUCKET_CAPTURE_FOLDER_NAME = os.getenv("S3_BUCKET_CAPTURE_FOLDER_NAME", "capture")
 

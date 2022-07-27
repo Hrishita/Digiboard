@@ -4,8 +4,11 @@ import { Typography, Button,Box } from '@material-ui/core';
 import axios from 'axios';
 import {useCookies}   from 'react-cookie';
 import { API_ENDPOINT } from '../../const';
+import { useNavigate } from "react-router-dom";
 
 function CaptureImage() {
+
+  const navigate = useNavigate();
 
   const [targetImage, setTargetImage] = useState('');
   const [cookie, setCookie] = useCookies()
@@ -18,7 +21,10 @@ function CaptureImage() {
     // const url = 'http://jay-alb-1749361.us-east-1.elb.amazonaws.com/comparator/compare';
     const url = `${API_ENDPOINT}/comparator/compare`;
     const data = { username: cookie.username, target_image: targetImage };
-    axios.post(url, data).then(res => console.log(res)).catch(err => console.error(err));
+    axios.post(url, data).then(res => {
+        console.log(res)
+        navigate('/logout')
+    }).catch(err => console.error(err));
   };
 
   return (

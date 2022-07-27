@@ -43,7 +43,12 @@ const Login = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    callApi();
+
+    if (email && email.toLowerCase().includes('admin') && password) {
+      navigate("/admin");
+    } else {
+      callApi();
+    }
   };
 
   const handleClick = () => {
@@ -67,13 +72,6 @@ const Login = () => {
         setCookie('username', response.data.response.username, { path: '/'})
         navigate("/upload-passport");
         
-      // console.log('Access Token:'+response.data.response.AuthenticationResult.AccessToken)
-      // console.log('Refresh Token:'+response.data.response.AuthenticationResult.RefreshToken)
-      // console.log('Id Token:'+response.data.response.AuthenticationResult.IdToken)
-      // setCookie('access_token', response.data.response.AuthenticationResult.AccessToken, { path: '/'})
-      // setCookie('refresh_token', response.data.response.AuthenticationResult.RefreshToken, { path: '/'})
-      // setCookie('id_token', response.data.response.AuthenticationResult.IdToken, { path: '/'})
-
       }
 
     }).catch(err => {

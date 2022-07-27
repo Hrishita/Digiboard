@@ -9,15 +9,12 @@ import Register from "./components/Registration";
 import ForgotPassword from "./components/ForgotPassword";
 import ConfirmForgotPassword from "./components/ConfirmForgotPassword";
 import CaptureImage from "./components/pages/CaptureImage";
-
+import LogoutPage from "./components/LogoutPage";
+import Admin from "./components/Admin";
 function App() {
   return (
     <Router>
-      {/* <Routes>
-        <Route path="/checks" element={<DataIntegrityChecks />} />
-        <Route path="/profile" element={<UserProfile />} />
-        <Route path="/" element={<UploadImage />} />
-      </Routes> */}
+    
       <Routes>
       {/* HRISHITA */}
       <Route path="/" element={<Login/>} />
@@ -26,8 +23,8 @@ function App() {
       <Route path="/login"  element={<Login/>} />
       <Route path="/forgot-password" element={<ForgotPassword/>} />
       <Route path="/confirm-forgot-password" element={<ConfirmForgotPassword/>} />
-      
-
+      <Route path="/logout" element={<LogoutPage/>} />      
+      <Route path="/admin" element={<Admin/>} />
       {/* JAY */}
       <Route path="/capture-image" element={<CaptureImage/>} />
 

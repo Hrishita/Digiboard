@@ -50,7 +50,7 @@ Parameters:
 
   LambdaZippedCodeS3Link:
     Type: String
-    Default: s3://digiboard-bucket/report_generation_lambda.zip
+    Default: s3://digiboard-s3-bucket/report_generation_lambda.zip
     Description: Link of the Zip file for lambda uploaded in S3 Bucket.
 
 

@@ -4,7 +4,7 @@ import os
 import csv
 
 TABLE_NAME = "digiboard-data"
-OUTPUT_BUCKET = "digiboard-bucket"
+OUTPUT_BUCKET = "digiboard-s3-bucket"
 TEMP_FILENAME = '/tmp/report.csv'
 OUTPUT_KEY = 'admin-report/report.csv'
 
